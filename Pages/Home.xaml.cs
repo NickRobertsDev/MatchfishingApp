@@ -40,9 +40,10 @@ public partial class Home : ContentPage
     {
         var mvm = _sp.GetRequiredService<MatchfishingApp.Models.ViewModels.MatchDataViewModel>();
         var logger = _sp.GetRequiredService<ILogger<MatchfishingApp.Pages.MatchTracker>>();
-        var db = _sp.GetRequiredService<MatchDb>();
+        var db = _sp.GetRequiredService<MatchfishingApp.Data.MatchDb>();
 
-        var page = new MatchfishingApp.Pages.MatchTracker(mvm, logger, db);
+        // NEW: pass resumeConfirmed: true
+        var page = new MatchfishingApp.Pages.MatchTracker(mvm, logger, db, resumeConfirmed: true);
         await Navigation.PushAsync(page);
     }
 

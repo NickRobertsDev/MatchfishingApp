@@ -39,7 +39,7 @@ public partial class MatchTracker : ContentPage
     private bool _isStopwatchRunningUi;
 
     private readonly MatchDb _db;
-
+    private readonly bool _resumeConfirmed; // NEW
 
 
 
@@ -52,28 +52,28 @@ public partial class MatchTracker : ContentPage
      * BLUETOOTH END
      */
 
-    public MatchTracker(MatchDataViewModel matchDataViewModel,
-                    ILogger<MatchTracker> logger,
-                    MatchDb db)
+    public MatchTracker(
+        MatchDataViewModel matchDataViewModel,
+        ILogger<MatchTracker> logger,
+        MatchDb db,
+        bool resumeConfirmed = false) // NEW
     {
         InitializeComponent();
 
         _logger = logger;
         viewModel = matchDataViewModel;
         _bluetoothAdapter = CrossBluetoothLE.Current.Adapter;
-        _db = db; // <-- store it
+        _db = db;
 
+        _resumeConfirmed = resumeConfirmed; // NEW
 
         BindingContext = viewModel;
 
         CalculateAndSetMatchDuration();
         UpdateTimeRemainingLabel();
 
-
-        // only wire up the UI timer, do NOT start it yet
         _uiTimer.Elapsed += OnUiTimerTick;
 
-        // initialize display to 00:00.000
         spanTime.Text = "00:00";
         spanMs.Text = ".0";
         UpdateStopwatchUi(false);
@@ -155,22 +155,19 @@ public partial class MatchTracker : ContentPage
     {
         base.OnAppearing();
 
-        // 1) Ask DB if there is an active match
-        var (active, keepnets) = await _db.LoadActiveAsync();
-        if (active != null)
+        // --- CASE A: We arrived here from Home with "Resume" already confirmed ---
+        if (_resumeConfirmed)
         {
-            // 2) Ask the user
-            var popup = new ResumeActiveMatchPopup();
-            var choice = await this.ShowPopupAsync(popup) as string; // "resume" or "discard"
-
-            if (choice == "resume")
+            var (active, keepnets) = await _db.LoadActiveAsync();
+            if (active != null)
             {
-                // Convert ticks back to local and restore
+                // Restore persisted match into the in-memory model
                 var startLocal = new DateTimeOffset(new DateTime(active.StartUtcTicks, DateTimeKind.Utc)).ToLocalTime();
                 var duration = TimeSpan.FromMinutes(active.DurationMinutes);
 
                 var md = viewModel.MatchData;
-                md.RestoreFromPersistence(startLocal, duration, active.TotalLb);  // helper added earlier
+                md.RestoreFromPersistence(startLocal, duration, active.TotalLb);
+
                 md.Nets.Clear();
                 foreach (var k in keepnets)
                 {
@@ -184,33 +181,96 @@ public partial class MatchTracker : ContentPage
                 }
                 md.CurrentMatchId = active.Id;
 
-                // Refresh countdown/chart and ensure timer is running
+                // Hide/disable any "start match" overlay for resume flow
+                overlayGrid.IsVisible = false;
+                mainContent.IsEnabled = true;
+                btnStartMatchPopup.IsEnabled = false;
+
+                // Refresh UI + (re)start countdown if needed
                 md.RecalculateTimeLeftFromSystemClock();
                 RebuildCatchChart();
-                if (md.TimeLeft > TimeSpan.Zero && !_isTimerRunning) StartTimer();
+                if (md.TimeLeft > TimeSpan.Zero && !_isTimerRunning)
+                    StartTimer();
+            }
+
+            // Do your sizing regardless
+            var disp = DeviceDisplay.MainDisplayInfo;
+            double widthDp = disp.Width / disp.Density;
+            lblTimeRemaining.FontSize = widthDp * 0.20;
+
+            UpdateTimeRemainingLabel();
+            return; // IMPORTANT: skip the default popup logic below
+        }
+
+        // --- CASE B: Default behavior (navigated here without pre-confirmed resume) ---
+        // This preserves your existing popup flow when you open MatchTracker directly
+        // (e.g., from a new match setup or deep link).
+        var (active2, keepnets2) = await _db.LoadActiveAsync();
+        if (active2 != null)
+        {
+            var popup = new ResumeActiveMatchPopup();
+            var choice = await this.ShowPopupAsync(popup) as string; // "resume" or "discard"
+
+            if (choice == "resume")
+            {
+                var startLocal = new DateTimeOffset(new DateTime(active2.StartUtcTicks, DateTimeKind.Utc)).ToLocalTime();
+                var duration = TimeSpan.FromMinutes(active2.DurationMinutes);
+
+                var md = viewModel.MatchData;
+                md.RestoreFromPersistence(startLocal, duration, active2.TotalLb);
+
+                md.Nets.Clear();
+                foreach (var k in keepnets2)
+                {
+                    md.Nets.Add(new Net
+                    {
+                        NetName = k.NetName,
+                        WeightLimit = (int)Math.Round(k.WeightLimitLb),
+                        NetWeightlb = (int)Math.Round(k.TotalLb),
+                        NetWeightoz = 0
+                    });
+                }
+                md.CurrentMatchId = active2.Id;
+
+                // Also suppress the "start match" overlay when resuming here
+                overlayGrid.IsVisible = false;
+                mainContent.IsEnabled = true;
+                btnStartMatchPopup.IsEnabled = false;
+
+                md.RecalculateTimeLeftFromSystemClock();
+                RebuildCatchChart();
+                if (md.TimeLeft > TimeSpan.Zero && !_isTimerRunning)
+                    StartTimer();
             }
             else if (choice == "discard")
             {
-                await _db.DiscardActiveAsync();  // mark previous active = false
-                                                 // Optionally clear in-memory state:
+                await _db.DiscardActiveAsync();
+
+                // Clear in-memory state for a clean slate
                 var md = viewModel.MatchData;
                 md.ResetTimes();
                 md.TotalMatchlb = 0; md.TotalMatchoz = 0;
                 foreach (var n in md.Nets) { n.NetWeightlb = 0; n.NetWeightoz = 0; }
                 md.CurrentMatchId = null;
+
+                // For a new match (fresh start) you may want the overlay shown/enabled here.
+                // If your XAML defaults to visible, no need to toggle it explicitly.
             }
         }
 
-        // 3) Your existing sizing + refresh lines
-        var disp = DeviceDisplay.MainDisplayInfo;
-        double widthDp = disp.Width / disp.Density;
-        lblTimeRemaining.FontSize = widthDp * 0.20;
+        // Sizing + initial UI refresh (as in your original code)
+        var disp2 = DeviceDisplay.MainDisplayInfo;
+        double widthDp2 = disp2.Width / disp2.Density;
+        lblTimeRemaining.FontSize = widthDp2 * 0.20;
 
-        mainContent.IsEnabled = false; // your current logic
+        // Your original behavior had this disabled by default until starting:
+        mainContent.IsEnabled = false;
+
         viewModel.MatchData.RecalculateTimeLeftFromSystemClock();
         UpdateTimeRemainingLabel();
         RebuildCatchChart();
     }
+
 
 
 
