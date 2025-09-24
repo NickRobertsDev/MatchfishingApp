@@ -1,0 +1,20 @@
+<toolkit:Popup
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+    x:Class="MatchfishingApp.Pages.AddKeepnetPopup">
+
+    <StackLayout Padding="20">
+        <Label Text="Add Keepnet" FontSize="24" HorizontalOptions="Center" />
+
+        <!--<Label Text="Keepnet Name" />
+        <Entry x:Name="entryNetName" Placeholder="Enter keepnet name" />
+
+        <Label Text="Weight Limit" />
+        <Entry x:Name="entryWeightLimit" Placeholder="Enter weight limit" Keyboard="Numeric" />-->
+
+        <Label Text="Click OK to add a new keepnet" />
+        
+        <Button Text="OK" Clicked="OnSaveClicked" />
+    </StackLayout>
+</toolkit:Popup>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<toolkit:Popup
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+    x:Class="MatchfishingApp.Popups.ResumeActiveMatchPopup"
+    Color="Transparent"
+    CanBeDismissedByTappingOutsideOfPopup="False">
+
+    <Frame Padding="20" BackgroundColor="White" CornerRadius="16" HasShadow="True">
+        <VerticalStackLayout Spacing="12" WidthRequest="280">
+            <Label Text="Resume active match?"
+                   FontAttributes="Bold"
+                   FontSize="20"
+                   HorizontalTextAlignment="Center"/>
+            <Label Text="You have a match in progress. Do you want to open it?"
+                   FontSize="14"
+                   TextColor="Gray"
+                   HorizontalTextAlignment="Center"/>
+            <HorizontalStackLayout Spacing="12" HorizontalOptions="Center">
+                <Button Text="Discard" x:Name="btnDiscard" Clicked="btnDiscard_Clicked" />
+                <Button Text="Resume"  x:Name="btnResume"  Clicked="btnResume_Clicked" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+    </Frame>
+</toolkit:Popup>

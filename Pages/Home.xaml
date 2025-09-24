@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MatchfishingApp.Pages.Home"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="Home">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+
+            <!-- Active match banner -->
+            <Frame
+                HasShadow="False"
+                CornerRadius="12"
+                BackgroundColor="#FFFDE7"
+                BorderColor="#FBC02D"
+                Padding="14"
+                IsVisible="{Binding HasActiveMatch}">
+                <VerticalStackLayout Spacing="10">
+                    <Label
+                        Text="{Binding ActiveMatchText}"
+                        FontAttributes="Bold"
+                        FontSize="16"
+                        TextColor="#5D4037" />
+                    <HorizontalStackLayout Spacing="10">
+                        <Button
+                            Text="Resume"
+                            Clicked="OnResumeActiveMatchClicked"
+                            BackgroundColor="#388E3C"
+                            TextColor="White" />
+                        <Button
+                            Text="Discard"
+                            Clicked="OnDiscardActiveMatchClicked"
+                            BackgroundColor="#D32F2F"
+                            TextColor="White" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- New Match -->
+            <Button
+                Text="New Match"
+                Clicked="OnNewMatchClicked"
+                BackgroundColor="#181C3F"
+                TextColor="White"
+                HeightRequest="48" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

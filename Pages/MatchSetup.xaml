@@ -1,0 +1,50 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="MatchfishingApp.Pages.MatchSetup">
+
+    <ScrollView>
+        <StackLayout Padding="20" Spacing="15">
+            <!-- Title -->
+            <Label Text="Match Setup" FontSize="24" FontAttributes="Bold" HorizontalOptions="Center" />
+
+            <!-- Venue Name Entry -->
+            <Label Text="Venue Name" />
+            <Entry Placeholder="Enter venue name" Text="{Binding MatchData.VenueName}" />
+
+            <!-- Lake Name Entry -->
+            <Label Text="Lake Name" />
+            <Entry Placeholder="Enter lake name" Text="{Binding MatchData.LakeName}" />
+
+            <!-- Peg Number Entry -->
+            <Label Text="Peg No" />
+            <Entry Placeholder="Enter Peg No" Text="{Binding MatchData.PegNumber}" />
+
+            <!-- Date of the Match -->
+            <Label Text="Date of Match" />
+            <DatePicker Date="{Binding MatchData.MatchDate}" />
+
+            <!-- Display formatted date -->
+            <Label Text="{Binding MatchData.MatchDate, StringFormat='{0:dd}th {0:MMMM} {0:yyyy}'}" />
+
+
+
+            <!-- Match Duration Entry -->
+            <Label Text="Match Duration" />
+            <StackLayout Orientation="Horizontal">
+                <Label Text="Hours" VerticalOptions="Center" />
+                <Entry Placeholder="0" Keyboard="Numeric" WidthRequest="50" Text="{Binding MatchData.MatchDurationHours}" />
+
+                <Label Text="Mins" VerticalOptions="Center" Margin="10,0,0,0" />
+                <Entry Placeholder="0" Keyboard="Numeric" WidthRequest="50" Text="{Binding MatchData.MatchDurationMinutes}" />
+            </StackLayout>
+
+            <!-- Keepnet Setup -->
+            <Label Text="Keepnet Name (optional)" />
+            <Entry Placeholder="Enter keepnet name" Text="{Binding MatchData.Nets[0].NetName}" />
+            <Label Text="Keepnet Weight Limit" />
+            <Entry Placeholder="Enter Weight Limit" Text="{Binding MatchData.Nets[0].WeightLimit}" />
+            <!-- Next Button -->
+            <Button Text="Next" Clicked="btnSetupNext_Clicked" />
+        </StackLayout>
+    </ScrollView>
+</ContentPage>

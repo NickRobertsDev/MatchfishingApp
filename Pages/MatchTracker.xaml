@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.Maui;assembly=LiveChartsCore.SkiaSharpView.Maui"
+             x:Class="MatchfishingApp.Pages.MatchTracker"
+             Title="MatchTracker"
+             xmlns:vm="clr-namespace:MatchfishingApp.Models.ViewModels"
+             xmlns:models="clr-namespace:MatchfishingApp.Models"
+            BackgroundColor="White"
+             NavigationPage.HasNavigationBar="False">
+             <!--x:DataType="vm:MatchDataViewModel"-->
+    <ContentPage.Resources>
+        <Style x:Key="IndicatorBorderStyle" 
+           TargetType="Border">
+            <Setter Property="VisualStateManager.VisualStateGroups"> 
+                <VisualStateGroupList>
+                    <VisualStateGroup x:Name="CommonStates">
+                        <VisualState x:Name="Normal">
+                            <VisualState.Setters>
+                                <Setter Property="BackgroundColor"
+                                    Value="LightGray" />
+                            </VisualState.Setters>
+                        </VisualState>
+                        <VisualState x:Name="Selected">
+                            <VisualState.Setters>
+                                <Setter Property="BackgroundColor"
+                                    Value="Green" />
+                                <Setter Property="WidthRequest"
+                                    Value="45" />
+                            </VisualState.Setters>
+                        </VisualState>
+                    </VisualStateGroup>
+                </VisualStateGroupList>
+            </Setter>
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid>
+
+        <ScrollView x:Name="mainContent">
+
+        <VerticalStackLayout Margin="0">
+
+
+                <!--
+                TIME REMAINING
+            -->
+            <Frame Margin="0,0,0,40" BackgroundColor="#2B310A" BorderColor="Transparent">
+                    <VerticalStackLayout Spacing="-20" >
+                        <Label x:Name="lblTimeRemaining" HorizontalOptions="Center" VerticalOptions="Center" FontSize="48" FontFamily="Technology" />
+                        <Label Text="Remaining" TextColor="#FFFFFF" HorizontalOptions="FillAndExpand" HorizontalTextAlignment="Center" FontSize="20" FontAttributes="Bold" Padding="0"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+
+
+
+                <!--
+                TOTAL WEIGHT LABEL
+            -->
+            <!--<Frame Margin="0,0,0,0" BackgroundColor="Orange" BorderColor="Transparent">
+            <VerticalStackLayout>
+                    <Label Text="Total Weight" TextColor="Black" HorizontalOptions="FillAndExpand" HorizontalTextAlignment="Center" FontSize="15" FontAttributes="Bold"/>
+
+                    <Label x:Name="lblTotalWeight" TextColor="Black" HorizontalOptions="FillAndExpand" HorizontalTextAlignment="Center"  FontSize="60" FontAttributes="Bold">
+                        
+                        <Label.Text>
+                            <Binding StringFormat="{}{0} lb" Path="MatchData.TotalMatchlb"/>
+                        </Label.Text>
+                    </Label>
+            </VerticalStackLayout>-->
+                
+            <!--
+                ADD WEIGHT BUTTONS
+            -->
+        <!--</Frame>-->
+
+                <FlexLayout Direction="Row" AlignItems="Center" Margin="0,0,0,53" BackgroundColor="black">
+
+
+                    <Frame Margin="0,4,0,0" BackgroundColor="#4B5320" BorderColor="Transparent" FlexLayout.Basis="100%" CornerRadius="10">
+
+                        <Grid ColumnSpacing="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*" />
+                                <!-- ~20% -->
+                                <ColumnDefinition Width="6*" />
+                                <!-- ~60% -->
+                                <ColumnDefinition Width="2*" />
+                                <!-- ~20% -->
+                            </Grid.ColumnDefinitions>
+
+                            <Button x:Name="btnMinus1lb" Grid.Column="0"
+            Text="-" TextColor="White"
+            HeightRequest="145"
+            BackgroundColor="Transparent"
+            FontAttributes="Bold" FontSize="50" CornerRadius="0"/>
+
+                            <VerticalStackLayout Grid.Column="1" Padding="0" Spacing="10">
+
+                                <Label x:Name="lblTotalWeight" TextColor="White"
+                                HorizontalTextAlignment="Center"
+                                FontSize="70" FontAttributes="Bold">
+                                    <Label.Text>
+                                        <Binding Path="MatchData.TotalMatchlb" StringFormat="{}{0} lb"/>
+                                    </Label.Text>
+                                </Label>
+
+                                <Label Text="Total Weight" TextColor="White"
+                               HorizontalTextAlignment="Center"
+                               FontSize="15" FontAttributes="Bold" />
+                            </VerticalStackLayout>
+
+                            <Button x:Name="btnPlus1lb" Grid.Column="2"
+            Text="+" Clicked="btnPlus1lb_Clicked"
+            FontAttributes="Bold" FontSize="50"
+            CornerRadius="0" HeightRequest="145"
+            VerticalOptions="Center"
+            BackgroundColor="Transparent" TextColor="White"/>
+                        </Grid>
+
+
+                    </Frame>
+
+
+
+                </FlexLayout>
+
+
+            <!--
+                KEEPNETS
+            -->
+            
+            <Frame x:Name="carouselFrame" Margin="0,0,0,0" BackgroundColor="#6A7337" Padding="0">
+
+                        
+                        <StackLayout>
+                    
+                    <CarouselView   x:Name="carouselView"
+                                    ItemsSource="{Binding MatchData.Nets}"
+                                    HorizontalOptions="CenterAndExpand"
+                                    WidthRequest="5"
+                                    IndicatorView="{x:Reference carouselIndicator}" 
+                                    PositionChanged="OnCarouselPositionChanged">  
+                        <CarouselView.ItemTemplate>
+                        <DataTemplate>
+                            <StackLayout>
+                                <StackLayout VerticalOptions="Center" HorizontalOptions="Center" Padding="20">
+                                    <Label Text="{Binding NetID, StringFormat='Keepnet #{0}'}" 
+                               FontAttributes="Bold" 
+                               HorizontalOptions="Center" 
+                               VerticalOptions="Center" 
+                               FontSize="24" />
+
+                                        <Label Text="{Binding WeightLimit, StringFormat='Weight Limit {0}lb'}" 
+                                FontAttributes="Bold" 
+                                HorizontalOptions="Center" 
+                                VerticalOptions="Center" 
+                                FontSize="14" />
+
+                                        <Label Text="{Binding NetWeightlb, StringFormat='{0} lb'}" 
+                               HorizontalOptions="Center" 
+                               VerticalOptions="Center" 
+                               FontSize="18" />
+
+                                        <!--<Label Text="{Binding NetWeightoz, StringFormat='{0} oz'}" 
+                               HorizontalOptions="Center" 
+                               VerticalOptions="Center" 
+                               FontSize="18" />-->
+                                    
+                                </StackLayout>
+
+                            </StackLayout>
+                        </DataTemplate>
+                    </CarouselView.ItemTemplate>
+                </CarouselView>
+
+                    <!--<IndicatorView x:Name="carouselIndicator"
+                               IndicatorColor="SlateGrey"
+                               SelectedIndicatorColor="DarkGreen"
+                               HorizontalOptions="CenterAndExpand">
+                        --><!--<IndicatorView.IndicatorTemplate>
+                            <DataTemplate>
+                                <Border Margin="5"
+                                        StrokeShape="RoundRectangle 50"
+                                        HeightRequest="15"
+                                        WidthRequest="15"/>
+                            </DataTemplate>
+                        </IndicatorView.IndicatorTemplate>--><!--
+
+                    </IndicatorView>-->
+
+                    <IndicatorView x:Name="carouselIndicator"  
+                                   Margin="0,0,0,0"
+                                   IndicatorColor="Transparent"
+                                   SelectedIndicatorColor="Transparent"
+                                   IsVisible="True"          
+                                   HorizontalOptions="Center">
+                        
+                        <IndicatorView.IndicatorTemplate>
+                            <DataTemplate>
+                                <Border Margin="5"
+                       StrokeShape="RoundRectangle 50"
+                       HeightRequest="15"
+                       WidthRequest="15"
+                       Style="{StaticResource IndicatorBorderStyle}"/>
+                            </DataTemplate>
+                        </IndicatorView.IndicatorTemplate>                       
+                    </IndicatorView>
+
+                        <Button Text="New Keepnet" Clicked="OnAddKeepnetClicked" VerticalOptions="Center" Margin="0,0,0,20" WidthRequest="150"
+                                BackgroundColor="#466145"
+                                FontSize="16"/>
+
+
+                    </StackLayout>
+
+                </Frame>
+            
+
+            
+
+            <!-- 
+                STOPWATCH
+            -->
+
+
+                <Frame x:Name="stopWatchFrame"
+       Margin="0,3,0,0"
+       Padding="10,0,0,25"
+       BackgroundColor="#929A68"
+       CornerRadius="12"
+       HasShadow="True">
+
+                    <VerticalStackLayout Spacing="12" HorizontalOptions="Center">
+
+                        <!-- Stopwatch header + time display -->
+                        <VerticalStackLayout Margin="10" HorizontalOptions="Center">
+                            <Label FontSize="20"
+                   HorizontalTextAlignment="Center"
+                   Text="Stopwatch"
+                   TextColor="Black"/>
+                            <Label FontSize="48" HorizontalTextAlignment="Center">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span x:Name="spanTime"
+                              Text="00:00"
+                              FontSize="48"
+                              TextColor="Black"/>
+                                        <Span x:Name="spanMs"
+                              Text=".0"
+                              FontSize="24"
+                              TextColor="Black"/>
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                        </VerticalStackLayout>
+
+                        <!-- START/ICONS TOGGLE WRAPPER -->
+                        <VerticalStackLayout Spacing="12">
+
+                            <!-- Shown before the stopwatch is started -->
+                            <Grid x:Name="StopwatchStartPanel" IsVisible="True">
+                                <Button x:Name="btnStopwatchStart"
+                        Text="Start"
+                         BackgroundColor="#7E896A"               
+                        FontSize="20"
+                        WidthRequest="150"
+                        SemanticProperties.Description="Start stopwatch"
+                        Clicked="btnStopwatchStart_Clicked"/>
+                            </Grid>
+
+                            <!-- Shown once running: Reset (↺) and Stop (⏹) -->
+                            <Grid x:Name="StopwatchRunningPanel"
+                  IsVisible="False"
+                  ColumnDefinitions="Auto,20,Auto"
+                  HorizontalOptions="Center">
+
+                                <HorizontalStackLayout Spacing="24" HorizontalOptions="Center">
+                                    <ImageButton Source="reset.png"
+                                 WidthRequest="40" HeightRequest="40"
+                                 BackgroundColor="Transparent"
+                                 Clicked="btnStopwatchReset_Clicked" />
+
+                                    <ImageButton Source="stop.png"
+                                 WidthRequest="40" HeightRequest="40"
+                                 BackgroundColor="Transparent"
+                                 Clicked="btnStopwatchStop_Clicked" />
+                                </HorizontalStackLayout>
+                            </Grid>
+
+                        </VerticalStackLayout>
+
+                    </VerticalStackLayout>
+                </Frame>
+
+
+                <!--Chart Start-->
+                <lvc:CartesianChart x:Name="catchChart"
+                    HeightRequest="160"
+                    Margin="12,8"
+                    LegendPosition="Bottom" />
+
+
+                <!--Chart End-->
+
+            </VerticalStackLayout>
+
+            
+            
+
+            
+        </ScrollView>
+
+        <!-- 2) Full-screen “Start Match?” overlay -->
+        <Grid x:Name="overlayGrid"
+                BackgroundColor="#80000000"
+                IsVisible="True">
+
+            <Frame Padding="20"
+               Scale="2"
+               BackgroundColor="White"
+               CornerRadius="10"
+               HorizontalOptions="Center"
+               VerticalOptions="Center"
+               HasShadow="True">
+                <VerticalStackLayout>
+                    <Label Text="Start Match?" TextColor="Black"
+                 FontSize="24"
+                 HorizontalOptions="Center" />
+                    <Button x:Name="btnStartMatchPopup"
+                  Text="Yes"
+                  FontSize="20"
+                  Margin="0,20,0,0"
+                  Clicked="btnStartMatchPopup_Clicked" />
+                </VerticalStackLayout>
+            </Frame>
+
+        </Grid>
+
+    </Grid>
+
+</ContentPage>
