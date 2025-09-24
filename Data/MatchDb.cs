@@ -81,5 +81,21 @@ namespace MatchfishingApp.Data
         // (Optional) Force-clear any active state (e.g., “Discard” flow)
         public Task DiscardActiveAsync() =>
             _conn.ExecuteAsync("UPDATE Match SET IsActive = 0 WHERE IsActive = 1");
+
+
+        public async Task<List<WeighEventRecord>> LoadWeighEventsAsync(int matchId)
+        {
+            return await _conn.Table<WeighEventRecord>()
+                                    .Where(w => w.MatchId == matchId)
+                                    .OrderBy(w => w.TimestampUtcTicks)
+                                    .ToListAsync();
+        }
+
+
+
+
+
     }
+
+
 }

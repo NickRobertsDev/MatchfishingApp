@@ -181,16 +181,16 @@ public partial class MatchTracker : ContentPage
                 }
                 md.CurrentMatchId = active.Id;
 
-                // Hide/disable any "start match" overlay for resume flow
+                // Hide start overlay for resumes
                 overlayGrid.IsVisible = false;
                 mainContent.IsEnabled = true;
                 btnStartMatchPopup.IsEnabled = false;
 
-                // Refresh UI + (re)start countdown if needed
+                // Refresh UI and chart
                 md.RecalculateTimeLeftFromSystemClock();
-                RebuildCatchChart();
-                if (md.TimeLeft > TimeSpan.Zero && !_isTimerRunning)
-                    StartTimer();
+                await RebuildCatchChartAsync();
+                if (md.TimeLeft > TimeSpan.Zero && !_isTimerRunning) StartTimer();
+
             }
 
             // Do your sizing regardless
@@ -232,15 +232,14 @@ public partial class MatchTracker : ContentPage
                 }
                 md.CurrentMatchId = active2.Id;
 
-                // Also suppress the "start match" overlay when resuming here
                 overlayGrid.IsVisible = false;
                 mainContent.IsEnabled = true;
                 btnStartMatchPopup.IsEnabled = false;
 
                 md.RecalculateTimeLeftFromSystemClock();
-                RebuildCatchChart();
-                if (md.TimeLeft > TimeSpan.Zero && !_isTimerRunning)
-                    StartTimer();
+                await RebuildCatchChartAsync();
+                if (md.TimeLeft > TimeSpan.Zero && !_isTimerRunning) StartTimer();
+
             }
             else if (choice == "discard")
             {
@@ -268,7 +267,8 @@ public partial class MatchTracker : ContentPage
 
         viewModel.MatchData.RecalculateTimeLeftFromSystemClock();
         UpdateTimeRemainingLabel();
-        RebuildCatchChart();
+        await RebuildCatchChartAsync();
+
     }
 
 
@@ -366,7 +366,9 @@ public partial class MatchTracker : ContentPage
             _ = StartMatchDbInsertAsync();  // <-- fire-and-forget insert
 
             viewModel.MatchData.RecalculateTimeLeftFromSystemClock();
-            RebuildCatchChart();
+            _ = RebuildCatchChartAsync();
+
+
             StartTimer();
 
         }
@@ -464,7 +466,9 @@ public partial class MatchTracker : ContentPage
         _ = PersistWeighAsync(deltaLb);
 
         // Refresh UI that depends on totals
-        RebuildCatchChart();
+        _ = RebuildCatchChartAsync();
+
+
         _logger.LogInformation("Weight updated by {deltaLb} lb. New total: {totalLb} lb",
             deltaLb, md.TotalMatchlb);
     }
@@ -533,7 +537,8 @@ public partial class MatchTracker : ContentPage
 
         _ = PersistWeighAsync(deltaLb);
 
-        RebuildCatchChart(); // update the chart
+        _ = RebuildCatchChartAsync();
+
 
 
         _logger.LogInformation("Weight updated. New TotalMatchlb: {totalMatchlb}", viewModel.MatchData.TotalMatchlb);
@@ -541,14 +546,25 @@ public partial class MatchTracker : ContentPage
 
     private const double BIN_MINUTES = 30.0; // 1-minute bins for testing (was 30)
 
-    private void RebuildCatchChart()
+    private async Task RebuildCatchChartAsync()
     {
         var md = viewModel.MatchData;
-        // guard rails
-        if (!md.MatchStartDateTime.HasValue || md.MatchDuration <= TimeSpan.Zero)
+
+        // If there’s no defined match yet, show an empty chart but with a visible Y axis
+        if (!md.MatchStartDateTime.HasValue || md.MatchDuration <= TimeSpan.Zero || md.CurrentMatchId is null)
         {
             catchChart.Series = Array.Empty<ISeries>();
             catchChart.XAxes = new[] { new LiveChartsCore.SkiaSharpView.Axis { Labels = Array.Empty<string>() } };
+            catchChart.YAxes = new[]
+            {
+            new LiveChartsCore.SkiaSharpView.Axis
+            {
+                Labeler = v => $"{v:0} lb",
+                MinLimit = 0,
+                MaxLimit = 5,   // always show a usable range
+                MinStep  = 1
+            }
+        };
             return;
         }
 
@@ -558,29 +574,32 @@ public partial class MatchTracker : ContentPage
 
         var valuesLb = new double[bins];
 
-        foreach (var ev in md.WeighEvents)
-        {
-            if (ev.DeltaLb <= 0) continue; // only count positive catches (ignore corrections)
+        // Load weigh events directly from the DB so resume works immediately
+        var events = await _db.LoadWeighEventsAsync(md.CurrentMatchId.Value);
 
-            var minsFromStart = (ev.Timestamp - start).TotalMinutes;
+        foreach (var ev in events)
+        {
+            if (ev.DeltaLb <= 0) continue; // only positive catches contribute to bars
+
+            var ts = new DateTime(ev.TimestampUtcTicks, DateTimeKind.Utc);
+            var tsLocal = new DateTimeOffset(ts).ToLocalTime(); // keep consistent with UI clock
+            var minsFromStart = (tsLocal - start).TotalMinutes;
             if (minsFromStart < 0) continue;
 
             var ix = (int)Math.Floor(minsFromStart / BIN_MINUTES);
-            if (ix >= bins) ix = bins - 1; // clamp just-overflow events
+            if (ix >= bins) ix = bins - 1;
 
-            valuesLb[ix] += ev.DeltaLb; // <-- now pounds directly
+            valuesLb[ix] += ev.DeltaLb;
         }
 
-
         var labels = Enumerable.Range(1, bins)
-        .Select(i => TimeSpan.FromMinutes(i * BIN_MINUTES))
-        .Select(ts => $"{(int)ts.TotalHours}:{ts.Minutes:00}")
-        .ToArray();
-
+            .Select(i => TimeSpan.FromMinutes(i * BIN_MINUTES))
+            .Select(ts => $"{(int)ts.TotalHours}:{ts.Minutes:00}")
+            .ToArray();
 
         catchChart.Series = new ISeries[]
         {
-        new ColumnSeries<double> { Name = "Catch / 30m", Values = valuesLb }
+        new ColumnSeries<double> { Name = $"Catch / {BIN_MINUTES:0}m", Values = valuesLb }
         };
 
         catchChart.XAxes = new[]
@@ -588,15 +607,23 @@ public partial class MatchTracker : ContentPage
         new LiveChartsCore.SkiaSharpView.Axis { Labels = labels }
     };
 
-        // optional Y-axis labeler in lb/oz
+        // Dynamic Y scale with a sensible minimum so you're never stuck at 0
+        var maxBin = valuesLb.Length > 0 ? valuesLb.Max() : 0;
+        var minMax = 5;                                  // show at least 5 lb range
+        var yMax = Math.Max(minMax, Math.Ceiling(maxBin * 1.2)); // headroom
         catchChart.YAxes = new[]
         {
-            new LiveChartsCore.SkiaSharpView.Axis
-            {
-                Labeler = v => $"{v:0} lb" // show with 1 decimal place, or round if you prefer
-            }
-        };
+        new LiveChartsCore.SkiaSharpView.Axis
+        {
+            Labeler = v => $"{v:0} lb",
+            MinLimit = 0,
+            MaxLimit = yMax,
+            MinStep  = 1
+        }
+    };
     }
+
+
 
 
     private void UpdateKeepnetWeight(bool increase, int unit)
