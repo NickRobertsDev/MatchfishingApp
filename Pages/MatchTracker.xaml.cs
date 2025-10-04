@@ -585,7 +585,7 @@ public partial class MatchTracker : ContentPage
             .ToArray();
 
 
-        // build the column series with value labels on each bar
+        // build the column series with value labels on each bar test
         var series = new ColumnSeries<double>
         {
             Name = "Catch / 30m",
