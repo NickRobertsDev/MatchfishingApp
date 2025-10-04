@@ -19,6 +19,10 @@ using MatchfishingApp.Data;
 using MatchfishingApp.Popups; // add at top
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using LiveChartsCore.Measure;
+using LiveChartsCore.SkiaSharpView.Painting;
+using SkiaSharp;
+
 
 namespace MatchfishingApp.Pages;
 
@@ -77,6 +81,8 @@ public partial class MatchTracker : ContentPage
         spanTime.Text = "00:00";
         spanMs.Text = ".0";
         UpdateStopwatchUi(false);
+        catchChart.AnimationsSpeed = TimeSpan.Zero;
+        catchChart.EasingFunction = null;
 
 
         // Subscribe to the VolumeUpMessage.
@@ -572,30 +578,48 @@ public partial class MatchTracker : ContentPage
         }
 
 
+        // labels for the X axis (unchanged)
         var labels = Enumerable.Range(1, bins)
-        .Select(i => TimeSpan.FromMinutes(i * BIN_MINUTES))
-        .Select(ts => $"{(int)ts.TotalHours}:{ts.Minutes:00}")
-        .ToArray();
+            .Select(i => TimeSpan.FromMinutes(i * BIN_MINUTES))
+            .Select(ts => $"{(int)ts.TotalHours}:{ts.Minutes:00}")
+            .ToArray();
 
 
-        catchChart.Series = new ISeries[]
+        // build the column series with value labels on each bar
+        var series = new ColumnSeries<double>
         {
-        new ColumnSeries<double> { Name = "Catch / 30m", Values = valuesLb }
+            Name = "Catch / 30m",
+            Values = valuesLb,
+
+            // labels (keep your formatter change)
+            DataLabelsPaint = new SolidColorPaint(SKColors.White),
+            DataLabelsPosition = DataLabelsPosition.Middle,
+            DataLabelsFormatter = p => $"{p.Model:0} lb",
+
+            // turn off series animations
+            AnimationsSpeed = TimeSpan.Zero,
+            EasingFunction = null
         };
 
+        catchChart.Series = new ISeries[] { series };
+
+        // keep X labels as before
         catchChart.XAxes = new[]
         {
-        new LiveChartsCore.SkiaSharpView.Axis { Labels = labels }
-    };
+    new LiveChartsCore.SkiaSharpView.Axis
+    {
+        Labels = labels
+    }
+};
 
-        // optional Y-axis labeler in lb/oz
+        // hide Y axis entirely
         catchChart.YAxes = new[]
         {
-            new LiveChartsCore.SkiaSharpView.Axis
-            {
-                Labeler = v => $"{v:0} lb" // show with 1 decimal place, or round if you prefer
-            }
-        };
+    new LiveChartsCore.SkiaSharpView.Axis
+    {
+        IsVisible = false
+    }
+};
     }
 
 
